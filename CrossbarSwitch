@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# MIT License
+
+# Copyright (c) 2020 William Won (william.won@gatech.edu)
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
+# Path
+BUILD_DIR="./build"
+B_DIR="$BUILD_DIR/bdir"
+BIN_DIR="$BUILD_DIR/bin"
+SIM_DIR="$BUILD_DIR/sim"
+INFO_DIR="$BUILD_DIR/info"
+VERILOG_DIR="$BUILD_DIR/verilog"
+CONFIGURATION_DIR="./configuration"
+SRC_DIR="./src"
+TESTBENCH_DIR="./testbench"
+INCLUDE_PATH="+"
+source $CONFIGURATION_DIR/DefaultTestbenchModule.sh
+source $CONFIGURATION_DIR/DefaultVerilogModule.sh
+
+
+# Functions
+function clean {
+    rm -rf $BUILD_DIR
+}
+
+function setup {
+	clean
+	compute_include_path
+    mkdir -p $BUILD_DIR
+    mkdir -p $B_DIR
+    mkdir -p $BIN_DIR
+    mkdir -p $SIM_DIR
+    mkdir -p $INFO_DIR
+    mkdir -p $VERILOG_DIR
+}
+
+function compute_include_path {
+    for directory in $(find . -mindepth 1 -maxdepth 1 -type d); do
+		if ! [[ $directory =~ \./\..* ]]; then
+			INCLUDE_PATH="$INCLUDE_PATH:$directory"
+
+			for subdirectory in $(find $directory -mindepth 1 -type d); do
+				INCLUDE_PATH="$INCLUDE_PATH:$subdirectory"
+			done
+		fi
+    done
+}
+
+function compile_testbench {
+    setup
+    bsc -u -sim +RTS -K1024M -RTS -aggressive-conditions -no-warn-action-shadowing -parallel-sim-link 8 -warn-scheduler-effort -bdir $B_DIR -simdir $SIM_DIR -info-dir $INFO_DIR -p $INCLUDE_PATH $1/$2Test.bsv
+    bsc -u -sim -e mk$2Test -o $BIN_DIR/$2Test +RTS -K1024M -RTS -bdir $B_DIR -simdir $SIM_DIR -info-dir $INFO_DIR -warn-scheduler-effort -parallel-sim-link 8 -Xc++ -O0
+}
+
+function compile_verilog {
+    setup
+    bsc -verilog -g mk$2 +RTS -K1024M -RTS -steps-max-intervals 200000 -aggressive-conditions -no-warn-action-shadowing -bdir $B_DIR -simdir $SIM_DIR -info-dir $INFO_DIR -p $INCLUDE_PATH -u $1/$2.bsv
+    find $SRC_DIR -name "*.v" -exec mv -t $VERILOG_DIR {} \+
+    printf "%s\n" "Verilog file saved: ./build/verilog/"
+}
+
+function run_testbench {
+    $BIN_DIR/$1Test
+}
+
+
+# Script
+case "$1" in
+    -l|--clean)
+        clean
+        printf "%s\n" "build directory removed";;
+    -c|--compile)
+        case "$2" in
+            "")
+                compile_testbench $TESTBENC_MODULE_PATH $DEFAULT_TESTBENCH;;
+            *)
+                compile_testbench $TESTBENCH_DIR $2;;
+        esac;;
+    -r|--run)
+        case "$2" in
+            "")
+                run_testbench $DEFAULT_TESTBENCH;;
+            *)
+                run_testbench $2;;
+        esac;;
+    -v|--verilog)
+        case "$2" in
+            "")
+                compile_verilog $VERILOG_MODULE_PATH $DEFAULT_VERILOG;;
+            *)
+                compile_verilog $SRC_DIR $2;;
+        esac;;
+    -h|--help|*)
+        printf "%s\n\n" "Usage: $0 <command> [<options>]"
+        printf "%s\n" "Commands:"
+        printf "    %-30s %s\n" "--help (-h)" "Shows this message"
+        printf "    %-30s %s\n" "--clean (-l)" "Remove build folder"
+        printf "    %-30s %s\n" "--compile (-c) [module]" "Compile [module] for simulation"
+        printf "    %-30s %s\n" "--run (-r) [module]" "Run simulation for [module]"
+        printf "    %-30s %s\n" "--verilog (-v) [module]" "Compile [module] in Verilog (saved in ./build/verilog/)";;
+esac
