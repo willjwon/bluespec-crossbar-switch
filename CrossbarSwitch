@@ -68,7 +68,7 @@ function compute_include_path {
 
 function compile_testbench {
     setup
-    bsc -u -sim +RTS -K1024M -RTS -aggressive-conditions -no-warn-action-shadowing -parallel-sim-link 8 -warn-scheduler-effort -bdir $B_DIR -simdir $SIM_DIR -info-dir $INFO_DIR -p $INCLUDE_PATH $1/$2Test.bsv
+    bsc -u -sim +RTS -K1024M -RTS -show-range-conflict -aggressive-conditions -no-warn-action-shadowing -parallel-sim-link 8 -warn-scheduler-effort -bdir $B_DIR -simdir $SIM_DIR -info-dir $INFO_DIR -p $INCLUDE_PATH $1/$2Test.bsv
     bsc -u -sim -e mk$2Test -o $BIN_DIR/$2Test +RTS -K1024M -RTS -bdir $B_DIR -simdir $SIM_DIR -info-dir $INFO_DIR -warn-scheduler-effort -parallel-sim-link 8 -Xc++ -O0
 }
 

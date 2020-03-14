@@ -20,47 +20,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-
-import Fifo::*;
-
-
-typedef Bit#(64) Data;
+import CrossbarSwitchComponent::*;
 
 
-interface Adder;
-    method Action putA(Data data);
-    method Action putB(Data data);
-    method ActionValue#(Data) getResult();
-endinterface
+typedef Bit#(32) TestInt;
+TestInt maxSimulationCycles = 10000;
 
 
 (* synthesize *)
-module mkAdder(Adder);
-    Fifo#(1, Data) argA <- mkPipelineFifo;
-    Fifo#(1, Data) argB <- mkPipelineFifo;
-    Fifo#(1, Data) result <- mkBypassFifo;
+module mkCrossbarSwitchComponentTest();
+    // Unit under test
+    CrossbarSwitchComponent#(10, Bit#(16)) uut <- mkCrossbarSwitchComponent;
 
+    // Testbench variables
+    Reg#(TestInt) cycle <- mkReg(0);
 
-    rule doAddition;
-        let a = argA.first;
-        let b = argB.first;
-        argA.deq;
-        argB.deq;
-
-        result.enq(a + b);
+    rule runSimulation;
+        cycle <= cycle + 1;
     endrule
 
+    rule finishSimulation if (cycle >= maxSimulationCycles);
+        $display("[SIM] Simulation done at cycle %d", cycle);
+        $finish(0);
+    endrule
 
-    method Action putA(Data data);
-        argA.enq(data);
-    endmethod
+    rule put if (cycle == 0);
+        uut.ingressPort[9].put(7);
+    endrule
 
-    method Action putB(Data data);
-        argB.enq(data);
-    endmethod
-
-    method ActionValue#(Data) getResult();
-        result.deq;
-        return result.first;
-    endmethod
+    rule print;
+        $display("Received %d at cycle %d", uut.egressPort.get, cycle);
+    endrule
 endmodule
