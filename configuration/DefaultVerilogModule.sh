@@ -23,5 +23,5 @@
 # SOFTWARE.
 
 
-DEFAULT_VERILOG="CrossbarSwitch"
+DEFAULT_VERILOG="CrossbarSwitchInstance"
 VERILOG_MODULE_PATH="./src"
