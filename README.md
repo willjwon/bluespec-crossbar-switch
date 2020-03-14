@@ -21,4 +21,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. -->
 
 # bluespec-crossbar-switch
-Crossbar Switch implementation in Bluespec System Verilog
+1-cycle `CrossbarSwitch` implementation in Bluespec System Verilog, using `RWire` module.
+
+## Interface
+`CrossbarSwitch#(Ingress Ports Count, Egress Ports Count, Egress Port Address Type, Data Type)`
+
+```bluespec
+import CrossbarSwitch::*;
+
+// 32 x 16 crossbar switch (egress port address is 4 bits), driving 64-bit data
+CrossbarSwitch#(32, 16, Bit#(4), Bit#(64)) crossbarSwitch <- mkCrossbarSwitch;
+
+// Put Data
+crossbarSwitch.ingressPort[0].put(32'b3, 13)  // (Input 0) sending (data 32'b3) to (Output 13)
+
+// Get Data
+let output = crossbarSwitch.egressPort[13].get;  // (Output 13) receiving result (in the same cycle)
+```
